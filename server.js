@@ -8,27 +8,24 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 require('dotenv').config();
 
-app.use(cors({
-  origin: 'http://localhost:5173'
-}));
-
-
+app.use(cors());
 app.use(express.json());
 
 // eslint-disable-next-line no-undef
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.log(err));
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.log(err));
 
 // Contact Schema
 const contactSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  description: { type: String, required: true },
   priority: { type: String, enum: ['L1', 'L2', 'L3'], required: true },
-  frequency_days: { type: Number, required: true },
-  last_contacted: { type: Date, default: Date.now },
+  frequencyValue: { type: Number, required: true },
+  frequencyUnit: { type: String, enum: ['days', 'weeks', 'months'], required: true },
+  lastContactedDate: { type: Date, default: Date.now },
   notes: { type: String },
-  whom: { type: String }, // <-- add this
-  social_links: [{ type: String }],
+  socialLinks: [{ type: String }], // <-- array of strings
 });
 
 const Contact = mongoose.model('Contact', contactSchema);
@@ -44,8 +41,27 @@ app.get('/api/contacts', async (req, res) => {
 
 // ADD a contact
 app.post('/api/contacts', async (req, res) => {
-  const { name, priority, frequency_days, last_contacted, notes, social_links } = req.body;
-  const newContact = new Contact({ name, priority, frequency_days, last_contacted, notes, social_links });
+  const {
+    name,
+    description,
+    priority,
+    frequencyValue,
+    frequencyUnit,
+    lastContactedDate,
+    notes,
+    socialLinks,
+  } = req.body;
+
+  const newContact = new Contact({
+    name,
+    description,
+    priority,
+    frequencyValue,
+    frequencyUnit,
+    lastContactedDate,
+    notes,
+    socialLinks,
+  });
   await newContact.save();
   res.status(201).json(newContact);
 });
@@ -58,6 +74,7 @@ app.put('/api/contacts/:id', async (req, res) => {
     if (!updated) return res.status(404).json({ error: 'Contact not found' });
     res.json(updated);
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: 'Update failed' });
   }
 });
@@ -68,6 +85,7 @@ app.delete('/api/contacts/:id', async (req, res) => {
     await Contact.findByIdAndDelete(req.params.id);
     res.status(204).end();
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: 'Delete failed' });
   }
 });
